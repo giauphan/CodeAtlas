@@ -1,78 +1,77 @@
 # 🗺️ CodeAtlas
 
-Lightweight AI-powered source code analysis extension for VS Code / Cursor
+**Lightweight AI-powered source code analysis extension for VS Code / Cursor**
 
-![VS Code Version](https://img.shields.io/badge/VS_Code-^1.80.0-blue.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-5.1.6-blue.svg) ![License](https://img.shields.io/badge/License-MIT-green.svg)
+![VS Code Version](https://img.shields.io/badge/VS%20Code-v1.80%2B-blue?logo=visualstudiocode)
+![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-![CodeAtlas Screenshot](docs/screenshot.png)
+CodeAtlas helps you visualize, understand, and navigate your codebase using interactive network graphs and AI-powered insights.
 
 ## Features
 
-- **Interactive Force-Directed Graph:** Visualize modules, functions, classes, and their relationships (imports, calls) in real-time.
-- **AI-Powered Code Insights:** Identify "God objects", high-coupling, and other structural or architectural issues immediately.
-- **AI Copilot Chat:** Have natural language queries about your project structure. Ask about dependencies, components, or circular references.
-- **Entity & Relationship Overview:** Quick stats about your codebase scope.
-- **Click-to-Navigate:** Click directly on a graph node to instantly open the file and navigate to the code definition.
-- **Ultra-lightweight:** Analyzes your AST directly without requiring any external databases or heavy servers.
+- 🌐 **Interactive Force-Directed Graph**: Visualize your code's architecture and dependencies in real-time.
+- 🔍 **AST-Based Code Analysis**: Deep semantic understanding of TypeScript, JavaScript, and Python files.
+- 🧠 **AI-Powered Insights**: Get actionable recommendations, security audits, and maintainability scores.
+- 💬 **AI Copilot Chat**: Talk to your codebase and ask complex architectural questions using natural language.
+- 📊 **Entity & Relationship Overview**: See clear counts and statistics of all modules, classes, functions, and their connections.
+- 🎯 **Click-to-Navigate**: Jump straight from graph nodes to the corresponding source code lines.
+- 🔄 **Auto-Reanalyze on Save**: The graph updates automatically as you write code.
+- 🔎 **Search & Filter**: Quickly find specific entities and filter node types to declutter large graphs.
+- ⚙️ **Configurable Settings**: Tweak analysis depth, auto-analysis behavior, and LLM configuration to your needs.
 
-## Installation
+## Screenshots
+*(Coming soon!)*
 
-### From VSIX
-1. Download the `.vsix` file from the [Releases](https://github.com/giauphan/CodeAtlas/releases) page.
-2. Open VS Code / Cursor.
-3. Go to the Extensions view (`Ctrl+Shift+X`).
-4. Click the `...` menu and select "Install from VSIX...".
-5. Select the downloaded `.vsix` file.
+## Quick Start
 
-### From Source
-```bash
-git clone https://github.com/giauphan/CodeAtlas.git
-cd CodeAtlas
-npm install
-npm run build
-```
-Then, press `F5` in VS Code to run the extension in the Extension Development Host.
+1. Install from the VSIX package or VS Code Marketplace.
+2. Open a project workspace.
+3. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run **CodeAtlas: Analyze Project**.
+4. Explore the interactive graph and ask AI for insights!
 
-## Usage
+## Configuration
 
-1. Open a TypeScript or JavaScript project workspace in VS Code.
-2. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac).
-3. Type and select `CodeAtlas: Analyze Project`.
-4. The extension will parse the codebase and open the CodeAtlas Insights panel.
-5. Explore the interactive graph, review AI Insights in the left panel, or chat with the AI Copilot using the toggle button in the bottom right corner.
+You can configure CodeAtlas via VS Code Settings (`Ctrl+,` or `Cmd+,`):
+
+| Setting | Default | Description |
+|---|---|---|
+| `codeatlas.autoAnalyzeOnSave` | `true` | Automatically re-analyze the project when files are saved. |
+| `codeatlas.anthropicApiKey` | `""` | Optional API key for Claude integration. Uses local models if left blank. |
+
+*(More settings are coming soon as the extension expands)*
 
 ## Tech Stack
 
 | Component | Technology |
-|-----------|-----------|
-| Extension | TypeScript, VS Code Extension API |
-| Parser | `@typescript-eslint/typescript-estree` |
-| Graph | `react-force-graph-2d` (Canvas/WebGL) |
-| UI | React 18, Vite |
-| Styling | CSS3, Glassmorphism |
+|---|---|
+| Extension Host | VS Code API, TypeScript |
+| AST Parser | `@typescript-eslint/typescript-estree`, Python `ast` |
+| Webview UI | React, Vite |
+| Graph Visualization | `react-force-graph-2d` |
+| Build Tooling | `esbuild`, `tsc`, `vsce` |
 
 ## Architecture
 
-The extension is separated into two main parts: the VS Code Extension Host and the React Webview UI.
-
 ```mermaid
 graph LR
-    A[VS Code Workspace Files] -->|AST Parsing| B(Analyzer/Extension Host)
-    B -->|Analysis Data JSON| C[React Webview UI]
-    C -->|Navigation Events| B
-    B -->|Reveal Code| A
+    A[VS Code Extension Host] -->|File Contents| B(AST Parser)
+    B -->|Raw Entities| C{Graph Transformer}
+    C -->|Graph Data Payload| D[React Webview UI]
+    D -->|Render Visualization| E((react-force-graph-2d))
+    D -.->|Post Message| A
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! To get started:
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork the repository and create a new branch.
+2. Run `npm install` to install dependencies.
+3. Run `npm run build` to build the extension and webview.
+4. Press `F5` in VS Code to launch the Extension Development Host and debug your changes.
+5. Submit a PR!
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
