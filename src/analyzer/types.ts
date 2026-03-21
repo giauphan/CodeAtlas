@@ -1,7 +1,7 @@
 export interface GraphNode {
   id: string;
   label: string;
-  type: 'module' | 'function' | 'class';
+  type: 'module' | 'function' | 'class' | 'variable';
   val?: number; // Size in graph
   color?: string;
   filePath?: string;
@@ -11,7 +11,7 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
-  type: 'import' | 'call';
+  type: 'import' | 'call' | 'contains';
   label?: string;
 }
 
@@ -34,6 +34,7 @@ export interface EntityCounts {
   functions: number;
   classes: number;
   dependencies: number;
+  circularDeps: number;
 }
 
 export interface AnalysisResult {

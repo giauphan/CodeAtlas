@@ -7,6 +7,7 @@ export class CodeAnalyzer {
   private workspaceRoot: string;
   private nodes: Map<string, GraphNode> = new Map();
   private links: GraphLink[] = [];
+  private readonly MAX_FILES = 500;
 
   constructor(workspaceRoot: string) {
     this.workspaceRoot = workspaceRoot;
@@ -16,7 +17,11 @@ export class CodeAnalyzer {
     this.nodes.clear();
     this.links = [];
 
-    const files = this.getFiles(this.workspaceRoot);
+    let files = this.getFiles(this.workspaceRoot);
+    if (files.length > this.MAX_FILES) {
+      console.warn(`[CodeAnalyzer] Workspace has ${files.length} files, which exceeds MAX_FILES (${this.MAX_FILES}). Truncating to ${this.MAX_FILES} files.`);
+      files = files.slice(0, this.MAX_FILES);
+    }
     
     for (const file of files) {
       this.analyzeFile(file);
@@ -35,14 +40,64 @@ export class CodeAnalyzer {
 
     const insights = this.generateAIInsights(graph);
 
+    const circularDepsCount = this.detectCircularDeps();
+
     const counts = {
       modules: Array.from(this.nodes.values()).filter(n => n.type === 'module').length,
       functions: Array.from(this.nodes.values()).filter(n => n.type === 'function').length,
       classes: Array.from(this.nodes.values()).filter(n => n.type === 'class').length,
-      dependencies: this.links.filter(l => l.type === 'import').length
+      dependencies: this.links.filter(l => l.type === 'import').length,
+      circularDeps: circularDepsCount
     };
 
     return { graph, insights, entityCounts: counts };
+  }
+
+  /**
+   * Detects circular dependencies among modules.
+   * Builds a directed graph of module imports and runs DFS cycle detection.
+   * @returns {number} The total number of back-edges (cycles) found.
+   */
+  private detectCircularDeps(): number {
+    const adjList = new Map<string, string[]>();
+    
+    // Build adjacency list for module-to-module imports
+    for (const link of this.links) {
+      if (link.type === 'import' && link.source.startsWith('module:') && link.target.startsWith('module:')) {
+        if (!adjList.has(link.source)) {
+          adjList.set(link.source, []);
+        }
+        adjList.get(link.source)!.push(link.target);
+      }
+    }
+
+    let cycles = 0;
+    const visited = new Set<string>();
+    const recStack = new Set<string>();
+
+    const dfs = (node: string) => {
+      visited.add(node);
+      recStack.add(node);
+
+      const neighbors = adjList.get(node) || [];
+      for (const neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          dfs(neighbor);
+        } else if (recStack.has(neighbor)) {
+          cycles++;
+        }
+      }
+
+      recStack.delete(node);
+    };
+
+    for (const node of adjList.keys()) {
+      if (!visited.has(node)) {
+        dfs(node);
+      }
+    }
+
+    return cycles;
   }
 
   private getFiles(dir: string, fileList: string[] = []): string[] {
@@ -73,7 +128,9 @@ export class CodeAnalyzer {
     try {
       const code = fs.readFileSync(filePath, 'utf-8');
       const relativePath = path.relative(this.workspaceRoot, filePath);
-      const moduleId = `module:${relativePath}`;
+      // Normalize to use forward slashes for matching
+      const normalizedRelativePath = relativePath.replace(/\\/g, '/');
+      const moduleId = `module:${normalizedRelativePath}`;
       
       this.addNode({
         id: moduleId,
@@ -90,19 +147,34 @@ export class CodeAnalyzer {
         jsx: true
       });
 
-      this.traverseAST(ast, moduleId, filePath);
+      // Keep track of imports in this file to resolve calls
+      const fileImports = new Map<string, string>(); // alias/name -> moduleId
+
+      this.traverseAST(ast, moduleId, filePath, moduleId, fileImports);
     } catch (e) {
       console.error(`Failed to parse file: ${filePath}`, e);
     }
   }
 
-  private traverseAST(node: any, currentModuleId: string, filePath: string) {
+  /**
+   * Traverses the AST recursively to extract modules, functions, classes, and variables.
+   * Also detects function calls and updates links.
+   */
+  private traverseAST(
+    node: any, 
+    currentModuleId: string, 
+    filePath: string, 
+    currentScopeId: string,
+    fileImports: Map<string, string>
+  ) {
     if (!node) return;
 
     if (Array.isArray(node)) {
-      node.forEach(child => this.traverseAST(child, currentModuleId, filePath));
+      node.forEach(child => this.traverseAST(child, currentModuleId, filePath, currentScopeId, fileImports));
       return;
     }
+
+    let nextScopeId = currentScopeId;
 
     if (node.type === 'ImportDeclaration') {
       const importPath = node.source?.value;
@@ -113,6 +185,14 @@ export class CodeAnalyzer {
           target: targetModuleId,
           type: 'import'
         });
+        
+        if (node.specifiers) {
+          for (const specifier of node.specifiers) {
+            if (specifier.local?.name) {
+              fileImports.set(specifier.local.name, targetModuleId);
+            }
+          }
+        }
         
         // Ensure target module node exists (even if it's an external module for now)
         if (!this.nodes.has(targetModuleId)) {
@@ -137,10 +217,11 @@ export class CodeAnalyzer {
         line: node.loc?.start?.line
       });
       this.addLink({
-        source: currentModuleId,
+        source: currentScopeId,
         target: funcId,
-        type: 'import' // using import to mean 'contains' for visualization tree
+        type: 'contains'
       });
+      nextScopeId = funcId;
     }
     
     if (node.type === 'ClassDeclaration' && node.id?.name) {
@@ -154,28 +235,151 @@ export class CodeAnalyzer {
         line: node.loc?.start?.line
       });
       this.addLink({
-        source: currentModuleId,
+        source: currentScopeId,
         target: classId,
-        type: 'import' // contains
+        type: 'contains'
       });
+      nextScopeId = classId;
     }
 
-    // CallExpressions for function calls within another function could be extracted here
-    // For simplicity, we just add nodes and simple links for now
+    if (node.type === 'MethodDefinition' && node.key?.name) {
+      const methodId = `function:${currentModuleId}:${node.key.name}`;
+      this.addNode({
+        id: methodId,
+        label: node.key.name,
+        type: 'function',
+        color: '#f72585',
+        filePath: filePath,
+        line: node.loc?.start?.line
+      });
+      this.addLink({
+        source: currentScopeId,
+        target: methodId,
+        type: 'contains'
+      });
+      nextScopeId = methodId;
+    }
+
+    if (node.type === 'VariableDeclarator' && node.id?.name) {
+      const varName = node.id.name;
+      
+      if (node.init && (node.init.type === 'ArrowFunctionExpression' || node.init.type === 'FunctionExpression')) {
+        const funcId = `function:${currentModuleId}:${varName}`;
+        this.addNode({
+          id: funcId,
+          label: varName,
+          type: 'function',
+          color: '#f72585',
+          filePath: filePath,
+          line: node.loc?.start?.line
+        });
+        this.addLink({
+          source: currentScopeId,
+          target: funcId,
+          type: 'contains'
+        });
+        nextScopeId = funcId;
+      } else if (currentScopeId === currentModuleId) {
+        // Top-level variable
+        const varId = `variable:${currentModuleId}:${varName}`;
+        this.addNode({
+          id: varId,
+          label: varName,
+          type: 'variable',
+          color: '#00ff88', // Green for variables
+          filePath: filePath,
+          line: node.loc?.start?.line
+        });
+        this.addLink({
+          source: currentScopeId,
+          target: varId,
+          type: 'contains'
+        });
+      }
+    }
+
+    if (node.type === 'CallExpression') {
+      let calleeName = '';
+      let objectName = '';
+      if (node.callee.type === 'Identifier') {
+        calleeName = node.callee.name;
+      } else if (node.callee.type === 'MemberExpression' && node.callee.property?.name) {
+        calleeName = node.callee.property.name;
+        if (node.callee.object?.name) {
+          objectName = node.callee.object.name;
+        }
+      }
+
+      if (calleeName) {
+        let targetId = '';
+        if (objectName && fileImports.has(objectName)) {
+          // It's a method call on an imported namespace/object
+          const targetModule = fileImports.get(objectName);
+          targetId = `function:${targetModule}:${calleeName}`;
+        } else if (fileImports.has(calleeName)) {
+          // It's a direct call to an imported function
+          const targetModule = fileImports.get(calleeName);
+          targetId = `function:${targetModule}:${calleeName}`;
+        } else {
+          // It's a local call
+          targetId = `function:${currentModuleId}:${calleeName}`;
+        }
+        
+        this.addLink({
+          source: currentScopeId,
+          target: targetId,
+          type: 'call'
+        });
+      }
+    }
 
     Object.keys(node).forEach(key => {
       if (key !== 'loc' && key !== 'range' && typeof node[key] === 'object') {
-        this.traverseAST(node[key], currentModuleId, filePath);
+        this.traverseAST(node[key], currentModuleId, filePath, nextScopeId, fileImports);
       }
     });
   }
 
+  /**
+   * Resolves the actual module path checking for index files and standard file extensions.
+   */
   private resolveImportPath(importPath: string, currentFilePath: string): string {
     if (importPath.startsWith('.')) {
       try {
-        const absolutePath = path.resolve(path.dirname(currentFilePath), importPath);
-        // This is simplified, real resolution needs to check .ts, .js, /index.ts etc.
-        const relativeToWorkspace = path.relative(this.workspaceRoot, absolutePath);
+        let absolutePath = path.resolve(path.dirname(currentFilePath), importPath);
+        
+        let foundPath = absolutePath;
+        const extensions = ['.ts', '.tsx', '.js', '.jsx'];
+        let matched = false;
+
+        if (fs.existsSync(absolutePath)) {
+          const stat = fs.statSync(absolutePath);
+          if (stat.isDirectory()) {
+            for (const ext of extensions) {
+              const indexPath = path.join(absolutePath, `index${ext}`);
+              if (fs.existsSync(indexPath)) {
+                foundPath = indexPath;
+                matched = true;
+                break;
+              }
+            }
+          } else {
+            matched = true;
+          }
+        }
+
+        if (!matched) {
+          for (const ext of extensions) {
+            const extPath = `${absolutePath}${ext}`;
+            if (fs.existsSync(extPath)) {
+              foundPath = extPath;
+              matched = true;
+              break;
+            }
+          }
+        }
+        
+        const relativeToWorkspace = path.relative(this.workspaceRoot, foundPath);
         // Normalize slashes
         return `module:${relativeToWorkspace.replace(/\\/g, '/')}`;
       } catch {
