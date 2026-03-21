@@ -489,6 +489,22 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   z-index: 1000;
+  transition: background-color 0.3s ease, border-top-color 0.3s ease;
+}
+
+.status-bar.pulse-update {
+  animation: statusBarPulse 2s ease-out;
+}
+
+@keyframes statusBarPulse {
+  0% {
+    background-color: rgba(6, 214, 160, 0.3);
+    border-top-color: #06d6a0;
+  }
+  100% {
+    background-color: rgba(15, 17, 26, 0.85);
+    border-top-color: var(--border-color);
+  }
 }
 
 .status-left, .status-right {
@@ -523,6 +539,36 @@ body {
   justify-content: space-between;
   padding: 0 20px;
   z-index: 1000;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refresh-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-cyan);
+  transform: scale(1.05);
+}
+
+.refresh-btn:active {
+  transform: scale(0.95);
 }
 
 .header-title {

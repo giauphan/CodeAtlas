@@ -18,11 +18,16 @@ declare global {
 const App = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(0);
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       if (message.command === 'updateAnalysis') {
         setAnalysisData(message.data);
+        setLastUpdateTimestamp(Date.now());
+        setIsRefreshing(false);
       }
     };
 
@@ -40,16 +45,28 @@ const App = () => {
     }
   };
 
+  const handleRefresh = () => {
+    if (window.vscode) {
+      setIsRefreshing(true);
+      window.vscode.postMessage({
+        command: 'requestAnalysis'
+      });
+    }
+  };
+
   const renderHeader = () => (
     <div className="header-bar">
       <div className="header-left">
         <span className="header-title">🗺️ CodeAtlas</span>
+        <button className="refresh-btn" onClick={handleRefresh} title="Refresh Analysis">
+          🔄
+        </button>
       </div>
       <div className="header-right">
-        {!analysisData ? (
+        {!analysisData || isRefreshing ? (
           <div className="header-status">
             <div className="spinner"></div>
-            <span>Analyzing...</span>
+            <span>{isRefreshing ? 'Refreshing...' : 'Analyzing...'}</span>
           </div>
         ) : (
           <div className="header-status ready">
@@ -96,6 +113,7 @@ const App = () => {
         entityCount={entityCount} 
         relationshipCount={relationshipCount} 
         insightsCount={insightsCount} 
+        lastUpdateTimestamp={lastUpdateTimestamp}
       />
     </div>
   );

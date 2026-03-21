@@ -94,6 +94,44 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(disposable);
   context.subscriptions.push(openPanelDisposable);
+
+  // File Watcher
+  const watcher = vscode.workspace.createFileSystemWatcher('**/*.{ts,tsx,js,jsx}');
+  let debounceTimer: NodeJS.Timeout | undefined;
+
+  const triggerReanalysis = () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(async () => {
+      if (WebviewProvider.currentPanel) {
+        if (statusBarItem) {
+          statusBarItem.text = '$(sync~spin) CodeAtlas: Updating...';
+        }
+        try {
+          const workspaceFolders = vscode.workspace.workspaceFolders;
+          if (workspaceFolders && workspaceFolders.length > 0) {
+            const analyzer = new CodeAnalyzer(workspaceFolders[0].uri.fsPath);
+            const result = await analyzer.analyzeProject();
+            WebviewProvider.currentPanel.sendAnalysisData(result);
+            if (statusBarItem) {
+              statusBarItem.text = `$(project) CodeAtlas: ${result.graph.nodes.length} nodes | ${result.graph.links.length} rels`;
+            }
+          }
+        } catch (error) {
+          console.error('CodeAtlas Auto-Analysis failed:', error);
+          if (statusBarItem) {
+            statusBarItem.text = '$(error) CodeAtlas: Error';
+          }
+        }
+      }
+    }, 2000);
+  };
+
+  watcher.onDidChange(triggerReanalysis);
+  watcher.onDidCreate(triggerReanalysis);
+  watcher.onDidDelete(triggerReanalysis);
+  context.subscriptions.push(watcher);
 }
 
 /**
