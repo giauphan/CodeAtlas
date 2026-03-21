@@ -16,6 +16,10 @@
       {
         "command": "codeatlas.analyzeProject",
         "title": "CodeAtlas: Analyze Project"
+      },
+      {
+        "command": "codeatlas.openPanel",
+        "title": "CodeAtlas: Open Insights Panel"
       }
     ]
   },
@@ -25,7 +29,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js",
+    "test": "node --experimental-vm-modules node_modules/tsx/dist/cli.mjs src/test/analyzer.test.ts",
     "build:webview": "vite build",
     "build:extension": "node esbuild.js",
     "build": "npm run build:webview && npm run build:extension"
@@ -40,6 +44,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "esbuild": "^0.19.2",
     "eslint": "^8.47.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.1.6",
     "vite": "^4.4.9"
   },

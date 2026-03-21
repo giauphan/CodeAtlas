@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AnalysisResult } from './analyzer/types';
 
 export class WebviewProvider {
@@ -104,9 +105,37 @@ export class WebviewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
+    const scriptPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.js');
+    const stylesPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.css');
+
+    if (!fs.existsSync(scriptPath.fsPath)) {
+      vscode.window.showErrorMessage('CodeAtlas: Webview build not found. Please run "npm run build" to build the extension assets.');
+      return `<!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CodeAtlas Error</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; color: var(--vscode-editor-foreground); }
+          .error-container { background: var(--vscode-inputValidation-errorBackground); border: 1px solid var(--vscode-inputValidation-errorBorder); padding: 20px; border-radius: 4px; }
+          h2 { margin-top: 0; color: var(--vscode-editorError-foreground); }
+        </style>
+      </head>
+      <body>
+        <div class="error-container">
+          <h2>CodeAtlas Webview Error</h2>
+          <p>The webview assets could not be found. This usually means the extension hasn't been built properly.</p>
+          <p><strong>Path not found:</strong> ${scriptPath.fsPath}</p>
+          <p>If you are developing the extension, make sure to run <code>npm run build</code> or <code>npm run build:webview</code>.</p>
+        </div>
+      </body>
+      </html>`;
+    }
+
     // Get path to bundled frontend script
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.js'));
-    const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.css'));
+    const scriptUri = webview.asWebviewUri(scriptPath);
+    const stylesUri = webview.asWebviewUri(stylesPath);
 
     // Use a nonce to only allow specific scripts to be run
     const nonce = getNonce();
@@ -125,7 +154,9 @@ export class WebviewProvider {
         <title>CodeAtlas Insights</title>
       </head>
       <body>
-        <div id="root"></div>
+        <div id="root">
+          <noscript>You need to enable JavaScript to run this app.</noscript>
+        </div>
         <script nonce="${nonce}" src="${scriptUri}"></script>
         <script nonce="${nonce}">
           const vscode = acquireVsCodeApi();

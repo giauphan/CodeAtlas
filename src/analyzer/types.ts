@@ -41,4 +41,6 @@ export interface AnalysisResult {
   graph: GraphData;
   insights: AIInsight[];
   entityCounts: EntityCounts;
+  totalFilesAnalyzed: number;
+  totalFilesSkipped: number;
 }
