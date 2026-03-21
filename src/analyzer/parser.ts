@@ -11,17 +11,20 @@ export class CodeAnalyzer {
   private links: GraphLink[] = [];
   private readonly maxFiles: number;
   private readonly excludedDirectories: string[];
+  private readonly excludedFiles: string[];
   private readonly fileExtensions: string[];
 
   constructor(
     workspaceRoot: string,
     maxFiles: number = 500,
     excludedDirectories: string[] = ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv'],
-    fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']
+    fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py', '.php'],
+    excludedFiles: string[] = ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']
   ) {
     this.workspaceRoot = workspaceRoot;
     this.maxFiles = maxFiles;
     this.excludedDirectories = excludedDirectories;
+    this.excludedFiles = excludedFiles;
     this.fileExtensions = fileExtensions;
   }
 
@@ -144,6 +147,10 @@ export class CodeAnalyzer {
       if (stat.isDirectory()) {
         this.getFiles(filePath, fileList);
       } else if (this.fileExtensions.some(ext => file.endsWith(ext))) {
+        // Skip excluded files
+        if (this.excludedFiles.includes(file)) {
+          continue;
+        }
         fileList.push(filePath);
       }
     }

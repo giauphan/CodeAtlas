@@ -63,6 +63,15 @@
           ],
           "description": "Directories to exclude from analysis"
         },
+        "codeatlas.excludedFiles": {
+          "type": "array",
+          "default": [
+            "_ide_helper.php",
+            "_ide_helper_models.php",
+            ".phpstorm.meta.php"
+          ],
+          "description": "File names to exclude from analysis (e.g. generated stubs)"
+        },
         "codeatlas.autoAnalyze": {
           "type": "boolean",
           "default": true,

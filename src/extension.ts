@@ -50,10 +50,11 @@ export function activate(context: vscode.ExtensionContext) {
       const config = vscode.workspace.getConfiguration('codeatlas');
       const maxFiles = config.get<number>('maxFiles', 500);
       const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
+      const excludedFiles = config.get<string[]>('excludedFiles', ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']);
       const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
 
       // Initialize analyzer
-      const analyzer = new CodeAnalyzer(workspaceRoot, maxFiles, excludedDirectories, fileExtensions);
+      const analyzer = new CodeAnalyzer(workspaceRoot, maxFiles, excludedDirectories, fileExtensions, excludedFiles);
       
       progress.report({ increment: 30, message: "Parsing ASTs..." });
       
