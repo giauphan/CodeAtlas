@@ -52,6 +52,12 @@ const App = () => {
     };
 
     window.addEventListener('message', handleMessage);
+
+    // Signal to extension host that React is ready to receive data
+    if (window.vscode) {
+      window.vscode.postMessage({ command: 'webviewReady' });
+    }
+
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 

@@ -9,6 +9,8 @@ export class WebviewProvider {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
   private _workspaceRoot: string;
+  private _isReady: boolean = false;
+  private _pendingMessages: any[] = [];
 
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, workspaceRoot: string) {
     this._panel = panel;
@@ -41,6 +43,15 @@ export class WebviewProvider {
             } else {
                vscode.window.showErrorMessage(`Cannot navigate to ${filePath}. Absolute path required.`);
             }
+            return;
+          case 'webviewReady':
+            // Webview React app has mounted and is ready to receive messages
+            this._isReady = true;
+            // Flush any pending messages
+            for (const msg of this._pendingMessages) {
+              this._panel.webview.postMessage(msg);
+            }
+            this._pendingMessages = [];
             return;
           case 'requestAnalysis':
             // Trigger analysis again if requested
@@ -85,11 +96,21 @@ export class WebviewProvider {
   }
 
   public sendAnalysisData(data: AnalysisResult) {
-    this._panel.webview.postMessage({ command: 'updateAnalysis', data });
+    const msg = { command: 'updateAnalysis', data };
+    if (this._isReady) {
+      this._panel.webview.postMessage(msg);
+    } else {
+      this._pendingMessages.push(msg);
+    }
   }
 
   public sendGraphPhysics(physics: string) {
-    this._panel.webview.postMessage({ command: 'updateGraphPhysics', physics });
+    const msg = { command: 'updateGraphPhysics', physics };
+    if (this._isReady) {
+      this._panel.webview.postMessage(msg);
+    } else {
+      this._pendingMessages.push(msg);
+    }
   }
 
   public dispose() {
