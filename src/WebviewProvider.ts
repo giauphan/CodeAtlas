@@ -186,15 +186,15 @@ export class WebviewProvider {
         <div id="error-display" style="display:none; position:fixed; top:20px; left:20px; right:20px; background:#1a0000; border:2px solid #ff4444; color:#ff6666; padding:16px; border-radius:8px; font-family:monospace; font-size:13px; z-index:99999; white-space:pre-wrap;"></div>
         <script nonce="${nonce}">
           window.onerror = function(msg, url, line, col, error) {
-            var el = document.getElementById('error-display');
-            if (el) { el.style.display = 'block'; el.textContent = 'JS Error: ' + msg + '\\nAt: ' + url + ':' + line + ':' + col + '\\n' + (error ? error.stack : ''); }
+            var _errDiv = document.getElementById('error-display');
+            if (_errDiv) { _errDiv.style.display = 'block'; _errDiv.textContent = 'JS Error: ' + msg + '\\nAt: ' + url + ':' + line + ':' + col + '\\n' + (error ? error.stack : ''); }
           };
           try {
-            const vscode = acquireVsCodeApi();
-            window.vscode = vscode;
-          } catch(e) {
-            var el = document.getElementById('error-display');
-            if (el) { el.style.display = 'block'; el.textContent = 'VsCode API Error: ' + e.message; }
+            var _vscodeApi = acquireVsCodeApi();
+            window.vscode = _vscodeApi;
+          } catch(_e) {
+            var _errDiv2 = document.getElementById('error-display');
+            if (_errDiv2) { _errDiv2.style.display = 'block'; _errDiv2.textContent = 'VsCode API Error: ' + _e.message; }
           }
         </script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
