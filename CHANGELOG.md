@@ -1,4 +1,37 @@
-# Change Log
+# Changelog
+
+All notable changes to CodeAtlas are documented here.
+
+## [1.1.1] - 2026-03-21
+
+### Added
+- **`excludedFiles` setting** — skip generated stub files (e.g. `_ide_helper.php`)
+- Default excludes: `_ide_helper.php`, `_ide_helper_models.php`, `.phpstorm.meta.php`
+
+### Fixed
+- Laravel `_ide_helper.php` (28k lines, 2072 method stubs) flooding the graph with framework functions
+
+---
+
+## [1.1.0] - 2026-03-21
+
+### Added
+- **PHP parser** — regex-based extraction of classes, interfaces, traits, enums, functions, properties, constants, namespaces, `use` statements
+- **Blade template parser** — `@extends`, `@include`, `@component`, `<x-component>`, `@section`, `@yield`
+- **Per-project config** — `codeatlas.fileExtensions` and `codeatlas.excludedDirectories` via `.vscode/settings.json`
+- `.php` added to default `fileExtensions`
+- `vendor`, `storage` added to default `excludedDirectories`
+- Color coding: PHP `#4F5D95`, Blade `#FF2D20`, Interface `#7209b7`, Trait `#06d6a0`, Enum `#ffd166`
+
+### Fixed
+- **Webview race condition** — data sent before React mounted; added `webviewReady` handshake with message buffering
+- **Blank webview** — moved `acquireVsCodeApi()` before React bundle; fixed CSS filename mismatch (`style.css` vs `index.css`)
+- **JS error on load** — variable name collision (`el`) between inline script and Vite bundle
+- **`graphPhysics` undefined** — replaced with default values
+- **Phantom function nodes** — orphan links filtered from graph; `react-force-graph` no longer auto-creates nodes for undefined targets
+- **CSS layout** — full rewrite: proper flexbox layout, left/right panels visible, graph centered, status bar flow-based
+
+---
 
 ## [1.0.0] - 2026-03-21
 
