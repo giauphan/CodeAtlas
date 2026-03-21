@@ -57,7 +57,9 @@
             "out",
             ".git",
             "__pycache__",
-            ".venv"
+            ".venv",
+            "vendor",
+            "storage"
           ],
           "description": "Directories to exclude from analysis"
         },
@@ -73,7 +75,8 @@
             ".tsx",
             ".js",
             ".jsx",
-            ".py"
+            ".py",
+            ".php"
           ],
           "description": "File extensions to include in analysis"
         },

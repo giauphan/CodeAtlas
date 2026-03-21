@@ -3,6 +3,7 @@ import * as path from 'path';
 import { parse } from '@typescript-eslint/typescript-estree';
 import { GraphData, GraphNode, GraphLink, AnalysisResult, AIInsight } from './types';
 import { PythonParser } from './pythonParser';
+import { PhpParser } from './phpParser';
 
 export class CodeAnalyzer {
   private workspaceRoot: string;
@@ -155,18 +156,30 @@ export class CodeAnalyzer {
       moduleId = `module:${normalizedRelativePath}`;
 
       const isPython = filePath.endsWith('.py');
+      const isPhp = filePath.endsWith('.php') && !filePath.endsWith('.blade.php');
+      const isBlade = filePath.endsWith('.blade.php');
+
+      // Set color based on file type
+      let moduleColor = '#4cc9f0'; // TS/JS default
+      if (isPython) moduleColor = '#3572A5';
+      else if (isPhp) moduleColor = '#4F5D95';
+      else if (isBlade) moduleColor = '#FF2D20';
 
       this.addNode({
         id: moduleId,
         label: path.basename(filePath),
         type: 'module',
-        color: isPython ? '#3572A5' : '#4cc9f0',
+        color: moduleColor,
         filePath: filePath,
         line: 1
       });
 
       if (isPython) {
         this.analyzePythonFile(code, moduleId, filePath);
+      } else if (isPhp) {
+        this.analyzePhpFile(code, moduleId, filePath);
+      } else if (isBlade) {
+        this.analyzeBladeFile(code, moduleId, filePath);
       } else {
         const ast = parse(code, {
           loc: true,
@@ -282,6 +295,137 @@ export class CodeAnalyzer {
         target: targetId,
         type: 'call'
       });
+    }
+  }
+
+  /**
+   * Parses PHP files using the PhpParser.
+   */
+  private analyzePhpFile(code: string, moduleId: string, filePath: string) {
+    const phpParser = new PhpParser();
+    const result = phpParser.parseFile(filePath, code);
+
+    // Classes, Interfaces, Traits, Enums
+    for (const cls of result.classes) {
+      const nodeType = cls.type === 'interface' ? 'class' : cls.type === 'trait' ? 'class' : 'class';
+      const classId = `class:${moduleId}:${cls.name}`;
+      const colorMap: Record<string, string> = {
+        class: '#f8961e',
+        interface: '#7209b7',
+        trait: '#06d6a0',
+        enum: '#ffd166'
+      };
+      this.addNode({
+        id: classId,
+        label: `${cls.name}`,
+        type: nodeType,
+        color: colorMap[cls.type] || '#f8961e',
+        filePath: filePath,
+        line: cls.line
+      });
+      this.addLink({ source: moduleId, target: classId, type: 'contains' });
+
+      // Extends
+      for (const parent of cls.parents) {
+        const parentId = `class:external:${parent}`;
+        if (!this.nodes.has(parentId)) {
+          this.addNode({ id: parentId, label: parent, type: 'class', color: '#f8961e' });
+        }
+        this.addLink({ source: classId, target: parentId, type: 'import' });
+      }
+
+      // Implements
+      for (const iface of cls.implements) {
+        const ifaceId = `class:external:${iface}`;
+        if (!this.nodes.has(ifaceId)) {
+          this.addNode({ id: ifaceId, label: iface, type: 'class', color: '#7209b7' });
+        }
+        this.addLink({ source: classId, target: ifaceId, type: 'import' });
+      }
+    }
+
+    // Functions
+    for (const func of result.functions) {
+      const funcId = `function:${moduleId}:${func.name}`;
+      this.addNode({
+        id: funcId,
+        label: func.name,
+        type: 'function',
+        color: '#f72585',
+        filePath: filePath,
+        line: func.line
+      });
+      this.addLink({ source: moduleId, target: funcId, type: 'contains' });
+    }
+
+    // Variables (properties, constants)
+    for (const variable of result.variables) {
+      const varId = `variable:${moduleId}:${variable.name}`;
+      this.addNode({
+        id: varId,
+        label: variable.name,
+        type: 'variable',
+        color: '#00ff88',
+        filePath: filePath,
+        line: variable.line
+      });
+      this.addLink({ source: moduleId, target: varId, type: 'contains' });
+    }
+
+    // Use statements (imports)
+    for (const imp of result.imports) {
+      const importSourceId = `external:${imp.alias}`;
+      this.addLink({ source: moduleId, target: importSourceId, type: 'import' });
+
+      if (!this.nodes.has(importSourceId)) {
+        this.addNode({
+          id: importSourceId,
+          label: imp.alias,
+          type: 'module',
+          color: '#7209b7'
+        });
+      }
+    }
+
+    // Method calls
+    for (const call of result.calls) {
+      const targetId = `function:${moduleId}:${call.name}`;
+      this.addLink({ source: moduleId, target: targetId, type: 'call' });
+    }
+  }
+
+  /**
+   * Parses Blade template files to extract template relationships.
+   */
+  private analyzeBladeFile(code: string, moduleId: string, filePath: string) {
+    const phpParser = new PhpParser();
+    const result = phpParser.parseBladeFile(filePath, code);
+
+    // @extends creates a dependency link
+    for (const ext of result.extends) {
+      const targetId = `blade:${ext.replace(/\./g, '/')}`;
+      if (!this.nodes.has(targetId)) {
+        this.addNode({ id: targetId, label: ext, type: 'module', color: '#FF2D20' });
+      }
+      this.addLink({ source: moduleId, target: targetId, type: 'import' });
+    }
+
+    // @include creates a dependency link
+    for (const inc of result.includes) {
+      const targetId = `blade:${inc.replace(/\./g, '/')}`;
+      if (!this.nodes.has(targetId)) {
+        this.addNode({ id: targetId, label: inc, type: 'module', color: '#FF2D20' });
+      }
+      this.addLink({ source: moduleId, target: targetId, type: 'import' });
+    }
+
+    // @component / <x-component>
+    for (const comp of result.components) {
+      const targetId = `component:${comp}`;
+      if (!this.nodes.has(targetId)) {
+        this.addNode({ id: targetId, label: comp, type: 'class', color: '#f8961e' });
+      }
+      this.addLink({ source: moduleId, target: targetId, type: 'import' });
     }
   }
 
