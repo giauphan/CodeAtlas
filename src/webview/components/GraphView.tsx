@@ -159,8 +159,8 @@ const GraphView: React.FC<GraphViewProps> = ({
         linkDirectionalArrowRelPos={1}
         linkDirectionalParticles={(link: any) => link.type === 'call' ? 4 : 0}
         linkDirectionalParticleSpeed={(link: any) => link.type === 'call' ? 0.02 : 0.01}
-        d3AlphaDecay={graphPhysics === 'relaxed' ? 0.01 : graphPhysics === 'tight' ? 0.05 : 0.02}
-        d3VelocityDecay={graphPhysics === 'relaxed' ? 0.1 : graphPhysics === 'tight' ? 0.6 : 0.3}
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
         backgroundColor="transparent"
       />
       
