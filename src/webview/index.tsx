@@ -26,6 +26,8 @@ const App = () => {
     variable: true
   });
   const [searchEnterTrigger, setSearchEnterTrigger] = useState(0);
+  const [showLeftPanel, setShowLeftPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(true);
 
   const toggleFilter = (type: 'module' | 'function' | 'class' | 'variable') => {
     setActiveFilters(prev => ({
@@ -130,7 +132,15 @@ const App = () => {
     <div className="app-container">
       {renderHeader()}
       <div className="codeatlas-app">
-        <div className="left-panel panel slide-in-1">
+        {/* Left panel toggle */}
+        <button
+          className={`panel-toggle panel-toggle-left ${showLeftPanel ? '' : 'collapsed'}`}
+          onClick={() => setShowLeftPanel(!showLeftPanel)}
+          title={showLeftPanel ? 'Hide AI Insights' : 'Show AI Insights'}
+        >
+          {showLeftPanel ? '◀' : '▶'}
+        </button>
+        <div className={`left-panel panel ${showLeftPanel ? 'slide-in-1' : 'panel-hidden'}`}>
           <AIInsights insights={analysisData.insights} />
         </div>
         <div className="center-panel">
@@ -149,9 +159,17 @@ const App = () => {
             searchEnterTrigger={searchEnterTrigger}
           />
         </div>
-        <div className="right-panel panel slide-in-2">
+        <div className={`right-panel panel ${showRightPanel ? 'slide-in-2' : 'panel-hidden'}`}>
           <EntityOverview counts={analysisData.entityCounts} />
         </div>
+        {/* Right panel toggle */}
+        <button
+          className={`panel-toggle panel-toggle-right ${showRightPanel ? '' : 'collapsed'}`}
+          onClick={() => setShowRightPanel(!showRightPanel)}
+          title={showRightPanel ? 'Hide Entity Overview' : 'Show Entity Overview'}
+        >
+          {showRightPanel ? '▶' : '◀'}
+        </button>
         <AICopilotChat graphData={analysisData.graph} counts={analysisData.entityCounts} />
       </div>
       <StatusSummary 

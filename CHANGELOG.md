@@ -2,6 +2,15 @@
 
 All notable changes to CodeAtlas are documented here.
 
+## [1.2.1] - 2026-03-21
+
+### Added
+- **Panel toggle buttons** — hide/show left (AI Insights) and right (Entity Overview) panels
+- Smooth slide animation with 0.3s transition
+- Graph auto-expands to fill space when panels are hidden
+
+---
+
 ## [1.2.0] - 2026-03-21
 
 ### Added

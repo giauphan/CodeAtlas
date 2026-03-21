@@ -28,15 +28,27 @@ interface AnalysisResult {
   stats: { files: number; functions: number; classes: number; dependencies: number; circularDeps: number };
 }
 
-// Find the analysis.json in current working directory or parent dirs
+// Find the analysis.json in current working directory, env var, or parent dirs
 function findAnalysisFile(): string | null {
-  let dir = process.cwd();
-  for (let i = 0; i < 5; i++) {
-    const candidate = path.join(dir, ".codeatlas", "analysis.json");
-    if (fs.existsSync(candidate)) return candidate;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+  const searchRoots: string[] = [];
+
+  // 1. Check CODEATLAS_PROJECT_DIR env var first (most reliable for MCP spawned by AI assistants)
+  if (process.env.CODEATLAS_PROJECT_DIR) {
+    searchRoots.push(process.env.CODEATLAS_PROJECT_DIR);
+  }
+
+  // 2. Current working directory
+  searchRoots.push(process.cwd());
+
+  for (const root of searchRoots) {
+    let dir = root;
+    for (let i = 0; i < 5; i++) {
+      const candidate = path.join(dir, ".codeatlas", "analysis.json");
+      if (fs.existsSync(candidate)) return candidate;
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
   }
   return null;
 }
