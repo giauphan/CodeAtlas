@@ -11,7 +11,7 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
-  type: 'import' | 'call' | 'contains';
+  type: 'import' | 'call' | 'contains' | 'implements';
   label?: string;
 }
 

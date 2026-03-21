@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from '@typescript-eslint/typescript-estree';
 import { GraphData, GraphNode, GraphLink, AnalysisResult, AIInsight } from './types';
+import { PythonParser } from './pythonParser';
 
 export class CodeAnalyzer {
   private workspaceRoot: string;
@@ -126,7 +127,7 @@ export class CodeAnalyzer {
       
       if (stat.isDirectory()) {
         this.getFiles(filePath, fileList);
-      } else if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx')) {
+      } else if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx') || file.endsWith('.py')) {
         fileList.push(filePath);
       }
     }
@@ -142,35 +143,135 @@ export class CodeAnalyzer {
       // Normalize to use forward slashes for matching
       const normalizedRelativePath = relativePath.replace(/\\/g, '/');
       moduleId = `module:${normalizedRelativePath}`;
-      
-      const ast = parse(code, {
-        loc: true,
-        range: true,
-        jsx: true
-      });
 
-      // Add node only if parsing succeeds
+      const isPython = filePath.endsWith('.py');
+
       this.addNode({
         id: moduleId,
         label: path.basename(filePath),
         type: 'module',
-        color: '#4cc9f0',
+        color: isPython ? '#3572A5' : '#4cc9f0',
         filePath: filePath,
         line: 1
       });
 
-      // Keep track of imports in this file to resolve calls
-      const fileImports = new Map<string, string>(); // alias/name -> moduleId
+      if (isPython) {
+        this.analyzePythonFile(code, moduleId, filePath);
+      } else {
+        const ast = parse(code, {
+          loc: true,
+          range: true,
+          jsx: true
+        });
 
-      this.traverseAST(ast, moduleId, filePath, moduleId, fileImports);
+        // Keep track of imports in this file to resolve calls
+        const fileImports = new Map<string, string>(); // alias/name -> moduleId
+
+        this.traverseAST(ast, moduleId, filePath, moduleId, fileImports);
+      }
       return true;
     } catch (e) {
-      console.error(`Failed to parse file: ${filePath}`, e);
-      // Clean up the node if it was added (although now we add it after parsing)
+      console.warn(`Failed to parse file: ${filePath}`, e);
+      // Clean up the node if it was added
       if (moduleId && this.nodes.has(moduleId)) {
         this.nodes.delete(moduleId);
       }
       return false;
+    }
+  }
+
+  /**
+   * Parses Python files using the PythonParser.
+   */
+  private analyzePythonFile(code: string, moduleId: string, filePath: string) {
+    const pythonParser = new PythonParser();
+    const result = pythonParser.parseFile(filePath, code);
+
+    for (const cls of result.classes) {
+      const classId = `class:${moduleId}:${cls.name}`;
+      this.addNode({
+        id: classId,
+        label: cls.name,
+        type: 'class',
+        color: '#f8961e',
+        filePath: filePath,
+        line: cls.line
+      });
+      this.addLink({
+        source: moduleId,
+        target: classId,
+        type: 'contains'
+      });
+
+      for (const parent of cls.parents) {
+        const parentId = `class:${moduleId}:${parent}`;
+        this.addLink({
+          source: classId,
+          target: parentId,
+          type: 'import'
+        });
+      }
+    }
+
+    for (const func of result.functions) {
+      const funcId = `function:${moduleId}:${func.name}`;
+      this.addNode({
+        id: funcId,
+        label: func.name,
+        type: 'function',
+        color: '#f72585',
+        filePath: filePath,
+        line: func.line
+      });
+      this.addLink({
+        source: moduleId,
+        target: funcId,
+        type: 'contains'
+      });
+    }
+
+    for (const variable of result.variables) {
+      const varId = `variable:${moduleId}:${variable.name}`;
+      this.addNode({
+        id: varId,
+        label: variable.name,
+        type: 'variable',
+        color: '#00ff88',
+        filePath: filePath,
+        line: variable.line
+      });
+      this.addLink({
+        source: moduleId,
+        target: varId,
+        type: 'contains'
+      });
+    }
+
+    for (const imp of result.imports) {
+      const importSourceId = `external:${imp.source || imp.names[0]}`;
+      this.addLink({
+        source: moduleId,
+        target: importSourceId,
+        type: 'import'
+      });
+
+      if (!this.nodes.has(importSourceId)) {
+        this.addNode({
+          id: importSourceId,
+          label: imp.source || imp.names[0],
+          type: 'module',
+          color: '#7209b7'
+        });
+      }
+    }
+
+    for (const call of result.calls) {
+      const targetId = `function:${moduleId}:${call.name}`;
+      this.addLink({
+        source: moduleId,
+        target: targetId,
+        type: 'call'
+      });
     }
   }
 
