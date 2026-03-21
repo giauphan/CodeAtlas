@@ -387,10 +387,15 @@ export class CodeAnalyzer {
       }
     }
 
-    // Method calls
+    // Method calls — only link to functions already discovered in the graph
     for (const call of result.calls) {
-      const targetId = `function:${moduleId}:${call.name}`;
-      this.addLink({ source: moduleId, target: targetId, type: 'call' });
+      // Search all known function nodes to find a match
+      const possibleTargets = Array.from(this.nodes.keys()).filter(
+        id => id.startsWith('function:') && id.endsWith(`:${call.name}`)
+      );
+      if (possibleTargets.length > 0) {
+        this.addLink({ source: moduleId, target: possibleTargets[0], type: 'call' });
+      }
     }
   }
 
