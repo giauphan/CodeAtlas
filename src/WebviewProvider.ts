@@ -134,7 +134,11 @@ export class WebviewProvider {
 
   private _getHtmlForWebview(webview: vscode.Webview) {
     const scriptPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.js');
-    const stylesPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.css');
+    // Vite with cssCodeSplit: false outputs 'style.css'
+    let stylesPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'style.css');
+    if (!fs.existsSync(stylesPath.fsPath)) {
+      stylesPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'assets', 'index.css');
+    }
 
     if (!fs.existsSync(scriptPath.fsPath)) {
       vscode.window.showErrorMessage('CodeAtlas: Webview build not found. Please run "npm run build" to build the extension assets.');
@@ -172,18 +176,26 @@ export class WebviewProvider {
       <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https:; font-src ${webview.cspSource};">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval'; img-src ${webview.cspSource} https:; font-src ${webview.cspSource};">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="${stylesUri}" rel="stylesheet">
         <title>CodeAtlas Insights</title>
       </head>
       <body>
-        <div id="root">
-          <noscript>You need to enable JavaScript to run this app.</noscript>
-        </div>
+        <div id="root"></div>
+        <div id="error-display" style="display:none; position:fixed; top:20px; left:20px; right:20px; background:#1a0000; border:2px solid #ff4444; color:#ff6666; padding:16px; border-radius:8px; font-family:monospace; font-size:13px; z-index:99999; white-space:pre-wrap;"></div>
         <script nonce="${nonce}">
-          const vscode = acquireVsCodeApi();
-          window.vscode = vscode;
+          window.onerror = function(msg, url, line, col, error) {
+            var el = document.getElementById('error-display');
+            if (el) { el.style.display = 'block'; el.textContent = 'JS Error: ' + msg + '\\nAt: ' + url + ':' + line + ':' + col + '\\n' + (error ? error.stack : ''); }
+          };
+          try {
+            const vscode = acquireVsCodeApi();
+            window.vscode = vscode;
+          } catch(e) {
+            var el = document.getElementById('error-display');
+            if (el) { el.style.display = 'block'; el.textContent = 'VsCode API Error: ' + e.message; }
+          }
         </script>
         <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>

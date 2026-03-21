@@ -7,6 +7,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/webview',
     emptyOutDir: true,
+    cssCodeSplit: false,
     rollupOptions: {
       input: {
         index: path.resolve(__dirname, 'src/webview/index.tsx'),
