@@ -172,11 +172,7 @@ export class WebviewProvider {
       <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <!--
-          Use a content security policy to only allow loading images from https or from our extension directory,
-          and only allow scripts that have a specific nonce.
-        -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https:; font-src ${webview.cspSource};">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="${stylesUri}" rel="stylesheet">
         <title>CodeAtlas Insights</title>
@@ -185,11 +181,11 @@ export class WebviewProvider {
         <div id="root">
           <noscript>You need to enable JavaScript to run this app.</noscript>
         </div>
-        <script nonce="${nonce}" src="${scriptUri}"></script>
         <script nonce="${nonce}">
           const vscode = acquireVsCodeApi();
           window.vscode = vscode;
         </script>
+        <script nonce="${nonce}" src="${scriptUri}"></script>
       </body>
       </html>`;
   }
