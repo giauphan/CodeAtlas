@@ -133,8 +133,11 @@ export class CodeAnalyzer {
     const files = fs.readdirSync(dir);
     
     for (const file of files) {
-      // Skip excluded directories and hidden directories
-      if (this.excludedDirectories.includes(file) || file.startsWith('.')) {
+      // Always exclude these directories regardless of config
+      const alwaysExclude = ['node_modules', 'vendor', '.git', 'dist', 'out', 'storage', 
+                              '__pycache__', '.venv', 'bootstrap', 'public', '.idea', '.vscode'];
+      // Skip excluded directories, always-excluded dirs, and hidden directories
+      if (this.excludedDirectories.includes(file) || alwaysExclude.includes(file) || file.startsWith('.')) {
         continue;
       }
       
