@@ -8,10 +8,20 @@ export class CodeAnalyzer {
   private workspaceRoot: string;
   private nodes: Map<string, GraphNode> = new Map();
   private links: GraphLink[] = [];
-  private readonly MAX_FILES = 500;
+  private readonly maxFiles: number;
+  private readonly excludedDirectories: string[];
+  private readonly fileExtensions: string[];
 
-  constructor(workspaceRoot: string) {
+  constructor(
+    workspaceRoot: string,
+    maxFiles: number = 500,
+    excludedDirectories: string[] = ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv'],
+    fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py']
+  ) {
     this.workspaceRoot = workspaceRoot;
+    this.maxFiles = maxFiles;
+    this.excludedDirectories = excludedDirectories;
+    this.fileExtensions = fileExtensions;
   }
 
   public async analyzeProject(): Promise<AnalysisResult> {
@@ -19,9 +29,9 @@ export class CodeAnalyzer {
     this.links = [];
 
     let files = this.getFiles(this.workspaceRoot);
-    if (files.length > this.MAX_FILES) {
-      console.warn(`[CodeAnalyzer] Workspace has ${files.length} files, which exceeds MAX_FILES (${this.MAX_FILES}). Truncating to ${this.MAX_FILES} files.`);
-      files = files.slice(0, this.MAX_FILES);
+    if (files.length > this.maxFiles) {
+      console.warn(`[CodeAnalyzer] Workspace has ${files.length} files, which exceeds maxFiles (${this.maxFiles}). Truncating to ${this.maxFiles} files.`);
+      files = files.slice(0, this.maxFiles);
     }
     
     let totalSkipped = 0;
@@ -117,8 +127,8 @@ export class CodeAnalyzer {
     const files = fs.readdirSync(dir);
     
     for (const file of files) {
-      // Skip node_modules and hidden directories
-      if (file === 'node_modules' || file.startsWith('.') || file === 'dist' || file === 'out') {
+      // Skip excluded directories and hidden directories
+      if (this.excludedDirectories.includes(file) || file.startsWith('.')) {
         continue;
       }
       
@@ -127,7 +137,7 @@ export class CodeAnalyzer {
       
       if (stat.isDirectory()) {
         this.getFiles(filePath, fileList);
-      } else if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx') || file.endsWith('.py')) {
+      } else if (this.fileExtensions.some(ext => file.endsWith(ext))) {
         fileList.push(filePath);
       }
     }
@@ -468,7 +478,7 @@ export class CodeAnalyzer {
         let absolutePath = path.resolve(path.dirname(currentFilePath), importPath);
         
         let foundPath = absolutePath;
-        const extensions = ['.ts', '.tsx', '.js', '.jsx'];
+        const extensions = this.fileExtensions;
         let matched = false;
 
         if (fs.existsSync(absolutePath)) {

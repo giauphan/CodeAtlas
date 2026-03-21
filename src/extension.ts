@@ -46,8 +46,14 @@ export function activate(context: vscode.ExtensionContext) {
 
       const workspaceRoot = workspaceFolders[0].uri.fsPath;
       
+      // Read settings
+      const config = vscode.workspace.getConfiguration('codeatlas');
+      const maxFiles = config.get<number>('maxFiles', 500);
+      const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv']);
+      const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py']);
+
       // Initialize analyzer
-      const analyzer = new CodeAnalyzer(workspaceRoot);
+      const analyzer = new CodeAnalyzer(workspaceRoot, maxFiles, excludedDirectories, fileExtensions);
       
       progress.report({ increment: 30, message: "Parsing ASTs..." });
       
@@ -62,6 +68,10 @@ export function activate(context: vscode.ExtensionContext) {
         // Send data to webview
         WebviewProvider.currentPanel?.sendAnalysisData(result);
         
+        // Pass graph physics configuration
+        const graphPhysics = config.get<string>('graphPhysics', 'default');
+        WebviewProvider.currentPanel?.sendGraphPhysics(graphPhysics);
+
         if (statusBarItem) {
           const numNodes = result.graph.nodes.length;
           const numLinks = result.graph.links.length;
@@ -132,6 +142,22 @@ export function activate(context: vscode.ExtensionContext) {
   watcher.onDidCreate(triggerReanalysis);
   watcher.onDidDelete(triggerReanalysis);
   context.subscriptions.push(watcher);
+
+  // Listen for configuration changes
+  vscode.workspace.onDidChangeConfiguration(e => {
+    if (e.affectsConfiguration('codeatlas')) {
+      if (WebviewProvider.currentPanel) {
+        // Re-analyze if analysis-related settings changed
+        if (
+          e.affectsConfiguration('codeatlas.maxFiles') ||
+          e.affectsConfiguration('codeatlas.excludedDirectories') ||
+          e.affectsConfiguration('codeatlas.fileExtensions')
+        ) {
+          vscode.commands.executeCommand('codeatlas.analyzeProject');
+        }
+      }
+    }
+  });
 }
 
 /**

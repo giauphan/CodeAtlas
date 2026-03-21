@@ -46,6 +46,9 @@ export class WebviewProvider {
             // Trigger analysis again if requested
             vscode.commands.executeCommand('codeatlas.analyzeProject');
             return;
+          case 'openSettings':
+            vscode.commands.executeCommand('workbench.action.openSettings', 'codeatlas');
+            return;
         }
       },
       null,
@@ -83,6 +86,10 @@ export class WebviewProvider {
 
   public sendAnalysisData(data: AnalysisResult) {
     this._panel.webview.postMessage({ command: 'updateAnalysis', data });
+  }
+
+  public sendGraphPhysics(physics: string) {
+    this._panel.webview.postMessage({ command: 'updateGraphPhysics', physics });
   }
 
   public dispose() {

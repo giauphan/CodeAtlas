@@ -40,7 +40,55 @@
         "command": "codeatlas.openPanel",
         "title": "CodeAtlas: Open Insights Panel"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CodeAtlas",
+      "properties": {
+        "codeatlas.maxFiles": {
+          "type": "number",
+          "default": 500,
+          "description": "Maximum number of files to analyze"
+        },
+        "codeatlas.excludedDirectories": {
+          "type": "array",
+          "default": [
+            "node_modules",
+            "dist",
+            "out",
+            ".git",
+            "__pycache__",
+            ".venv"
+          ],
+          "description": "Directories to exclude from analysis"
+        },
+        "codeatlas.autoAnalyze": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically re-analyze on file save"
+        },
+        "codeatlas.fileExtensions": {
+          "type": "array",
+          "default": [
+            ".ts",
+            ".tsx",
+            ".js",
+            ".jsx",
+            ".py"
+          ],
+          "description": "File extensions to include in analysis"
+        },
+        "codeatlas.graphPhysics": {
+          "type": "string",
+          "enum": [
+            "relaxed",
+            "default",
+            "tight"
+          ],
+          "default": "default",
+          "description": "Graph force simulation intensity"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run build",

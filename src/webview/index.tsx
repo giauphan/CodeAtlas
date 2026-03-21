@@ -74,6 +74,12 @@ const App = () => {
     }
   };
 
+  const handleOpenSettings = () => {
+    if (window.vscode) {
+      window.vscode.postMessage({ command: 'openSettings' });
+    }
+  };
+
   const renderHeader = () => (
     <div className="header-bar">
       <div className="header-left">
