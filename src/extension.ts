@@ -79,6 +79,19 @@ export function activate(context: vscode.ExtensionContext) {
           statusBarItem.text = `$(project) CodeAtlas: ${numNodes} nodes | ${numLinks} rels`;
         }
 
+        // Save analysis data for MCP server
+        const fs = require('fs');
+        const path = require('path');
+        const codeatlasDir = path.join(workspaceRoot, '.codeatlas');
+        if (!fs.existsSync(codeatlasDir)) {
+          fs.mkdirSync(codeatlasDir, { recursive: true });
+        }
+        fs.writeFileSync(
+          path.join(codeatlasDir, 'analysis.json'),
+          JSON.stringify(result, null, 2),
+          'utf-8'
+        );
+
         vscode.window.showInformationMessage('CodeAtlas: Analysis complete!');
       } catch (error) {
         console.error(error);

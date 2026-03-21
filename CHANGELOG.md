@@ -2,6 +2,20 @@
 
 All notable changes to CodeAtlas are documented here.
 
+## [1.2.0] - 2026-03-21
+
+### Added
+- **MCP Server** — AI assistants can query CodeAtlas analysis data via Model Context Protocol
+  - `get_project_structure` — list all modules, classes, functions, variables
+  - `get_dependencies` — import/call/containment relationships
+  - `get_insights` — AI-generated code insights
+  - `search_entities` — fuzzy search by entity name with relationships
+  - `get_file_entities` — all entities in a specific file
+- Extension now saves analysis to `.codeatlas/analysis.json` for MCP server
+- `.gemini/settings.json` MCP config included
+
+---
+
 ## [1.1.1] - 2026-03-21
 
 ### Added
