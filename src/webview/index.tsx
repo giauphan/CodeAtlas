@@ -5,6 +5,7 @@ import AIInsights from './components/AIInsights';
 import EntityOverview from './components/EntityOverview';
 import AICopilotChat from './components/AICopilotChat';
 import StatusSummary from './components/StatusSummary';
+import SearchBar from './components/SearchBar';
 import './styles/main.css';
 import { AnalysisResult } from '../analyzer/types';
 
@@ -17,6 +18,25 @@ declare global {
 
 const App = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState({
+    module: true,
+    function: true,
+    class: true,
+    variable: true
+  });
+  const [searchEnterTrigger, setSearchEnterTrigger] = useState(0);
+
+  const toggleFilter = (type: 'module' | 'function' | 'class' | 'variable') => {
+    setActiveFilters(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+  };
+
+  const handleSearchEnter = () => {
+    setSearchEnterTrigger(prev => prev + 1);
+  };
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdateTimestamp, setLastUpdateTimestamp] = useState<number>(0);
@@ -102,7 +122,20 @@ const App = () => {
           <AIInsights insights={analysisData.insights} />
         </div>
         <div className="center-panel">
-          <GraphView data={analysisData.graph} onNodeClick={handleNodeClick} />
+          <SearchBar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            activeFilters={activeFilters}
+            toggleFilter={toggleFilter}
+            onSearchEnter={handleSearchEnter}
+          />
+          <GraphView
+            data={analysisData.graph}
+            onNodeClick={handleNodeClick}
+            searchQuery={searchQuery}
+            activeFilters={activeFilters}
+            searchEnterTrigger={searchEnterTrigger}
+          />
         </div>
         <div className="right-panel panel slide-in-2">
           <EntityOverview counts={analysisData.entityCounts} />

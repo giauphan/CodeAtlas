@@ -23,8 +23,12 @@ export class CodeAnalyzer {
       files = files.slice(0, this.MAX_FILES);
     }
     
+    let totalSkipped = 0;
     for (const file of files) {
-      this.analyzeFile(file);
+      const success = this.analyzeFile(file);
+      if (!success) {
+        totalSkipped++;
+      }
     }
 
     // Add graph layout sizes based on relationships
@@ -50,7 +54,13 @@ export class CodeAnalyzer {
       circularDeps: circularDepsCount
     };
 
-    return { graph, insights, entityCounts: counts };
+    return {
+      graph,
+      insights,
+      entityCounts: counts,
+      totalFilesAnalyzed: files.length - totalSkipped,
+      totalFilesSkipped: totalSkipped
+    };
   }
 
   /**
@@ -124,14 +134,22 @@ export class CodeAnalyzer {
     return fileList;
   }
 
-  private analyzeFile(filePath: string) {
+  private analyzeFile(filePath: string): boolean {
+    let moduleId = '';
     try {
       const code = fs.readFileSync(filePath, 'utf-8');
       const relativePath = path.relative(this.workspaceRoot, filePath);
       // Normalize to use forward slashes for matching
       const normalizedRelativePath = relativePath.replace(/\\/g, '/');
-      const moduleId = `module:${normalizedRelativePath}`;
+      moduleId = `module:${normalizedRelativePath}`;
       
+      const ast = parse(code, {
+        loc: true,
+        range: true,
+        jsx: true
+      });
+
+      // Add node only if parsing succeeds
       this.addNode({
         id: moduleId,
         label: path.basename(filePath),
@@ -141,18 +159,18 @@ export class CodeAnalyzer {
         line: 1
       });
 
-      const ast = parse(code, {
-        loc: true,
-        range: true,
-        jsx: true
-      });
-
       // Keep track of imports in this file to resolve calls
       const fileImports = new Map<string, string>(); // alias/name -> moduleId
 
       this.traverseAST(ast, moduleId, filePath, moduleId, fileImports);
+      return true;
     } catch (e) {
       console.error(`Failed to parse file: ${filePath}`, e);
+      // Clean up the node if it was added (although now we add it after parsing)
+      if (moduleId && this.nodes.has(moduleId)) {
+        this.nodes.delete(moduleId);
+      }
+      return false;
     }
   }
 
