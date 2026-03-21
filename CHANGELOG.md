@@ -2,6 +2,16 @@
 
 All notable changes to CodeAtlas are documented here.
 
+## [1.2.2] - 2026-03-21
+
+### Added
+- **Auto-discover projects** — MCP server scans `~/` for all projects with `.codeatlas/analysis.json`
+- **`list_projects` tool** — lists all analyzed projects with last analysis time
+- All tools accept optional `project` parameter — specify by name or path
+- No more hardcoded `CODEATLAS_PROJECT_DIR` needed
+
+---
+
 ## [1.2.1] - 2026-03-21
 
 ### Added
