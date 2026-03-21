@@ -49,8 +49,8 @@ export function activate(context: vscode.ExtensionContext) {
       // Read settings
       const config = vscode.workspace.getConfiguration('codeatlas');
       const maxFiles = config.get<number>('maxFiles', 500);
-      const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv']);
-      const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py']);
+      const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
+      const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
 
       // Initialize analyzer
       const analyzer = new CodeAnalyzer(workspaceRoot, maxFiles, excludedDirectories, fileExtensions);

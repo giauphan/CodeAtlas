@@ -17,7 +17,7 @@ export class CodeAnalyzer {
     workspaceRoot: string,
     maxFiles: number = 500,
     excludedDirectories: string[] = ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv'],
-    fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py']
+    fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']
   ) {
     this.workspaceRoot = workspaceRoot;
     this.maxFiles = maxFiles;
