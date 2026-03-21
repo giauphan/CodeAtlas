@@ -1,54 +1,53 @@
 {
-  "name": "@giauphan/codeatlas-mcp",
+  "name": "codeatlas",
+  "displayName": "CodeAtlas",
+  "description": "Lightweight AI-powered source code analysis extension for VS Code / Cursor",
   "version": "1.0.0",
-  "description": "MCP server for CodeAtlas — exposes code analysis data to AI assistants via Model Context Protocol",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "codeatlas-mcp": "dist/index.js"
-  },
-  "files": [
-    "dist/",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "npx tsx index.ts",
-    "prepublishOnly": "npm run build"
-  },
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "codeatlas",
-    "code-analysis",
-    "ai",
-    "vscode",
-    "cursor",
-    "codebase",
-    "architecture",
-    "dependencies"
-  ],
-  "author": "GiauPhan <zero99ck9@gmail.com>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/giauphan/codeatlas-mcp.git"
-  },
-  "bugs": {
-    "url": "https://github.com/giauphan/codeatlas-mcp/issues"
-  },
-  "homepage": "https://github.com/giauphan/codeatlas-mcp#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "vscode": "^1.80.0"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "zod": "^3.24.4"
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeatlas.analyzeProject",
+        "title": "CodeAtlas: Analyze Project"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "build:webview": "vite build",
+    "build:extension": "node esbuild.js",
+    "build": "npm run build:webview && npm run build:extension"
   },
   "devDependencies": {
-    "@types/node": "^18.0.0",
-    "typescript": "^5.1.6"
+    "@types/node": "18.x",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "esbuild": "^0.19.2",
+    "eslint": "^8.47.0",
+    "typescript": "^5.1.6",
+    "vite": "^4.4.9"
+  },
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "^6.4.0",
+    "lucide-react": "^0.268.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-force-graph-2d": "^1.24.1"
   }
 }
