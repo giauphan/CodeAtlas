@@ -49,9 +49,14 @@ export class CodeAnalyzer {
       node.val = (node.type === 'module' ? 8 : (node.type === 'class' ? 6 : 4)) + Math.log1p(degree) * 2;
     });
 
+    // Only keep links where both source and target nodes exist
+    const validLinks = this.links.filter(
+      link => this.nodes.has(link.source) && this.nodes.has(link.target)
+    );
+
     const graph: GraphData = {
       nodes: Array.from(this.nodes.values()),
-      links: this.links
+      links: validLinks
     };
 
     const insights = this.generateAIInsights(graph);
