@@ -9,21 +9,29 @@ const CountUp: React.FC<{ end: number }> = ({ end }) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    let start = 0;
-    const duration = 1000;
-    const increment = end / (duration / 16);
+    let startTime: number | null = null;
+    const duration = 1000; // 1 second
 
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        clearInterval(timer);
-        setCount(end);
+    // easeOutCubic easing function
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = currentTime - startTime;
+      const t = Math.min(progress / duration, 1);
+      
+      const easedProgress = easeOutCubic(t);
+      setCount(Math.floor(easedProgress * end));
+
+      if (progress < duration) {
+        requestAnimationFrame(animate);
       } else {
-        setCount(Math.floor(start));
+        setCount(end);
       }
-    }, 16);
+    };
 
-    return () => clearInterval(timer);
+    const reqId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(reqId);
   }, [end]);
 
   return <span>{count}</span>;

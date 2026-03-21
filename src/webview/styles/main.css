@@ -24,9 +24,12 @@ body {
 
 .codeatlas-app {
   display: flex;
-  width: 100vw;
-  height: 100vh;
+  flex: 1;
+  width: 100%;
   position: relative;
+  overflow: hidden;
+  height: calc(100vh - 40px - 32px); /* Total height - header - status */
+  flex-direction: row;
 }
 
 .panel {
@@ -41,6 +44,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: calc(100vh - 40px - 32px - 40px); /* Adjust height for header and status bar */
 }
 
 .left-panel { border-left: none; }
@@ -434,4 +438,161 @@ body {
 @keyframes typingBounce {
   0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
   40% { transform: scale(1); opacity: 1; }
+}
+
+/* Zoom Controls Overlay */
+.zoom-controls {
+  position: absolute;
+  bottom: 80px; /* Above the chat toggle */
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-main);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+/* Status Bar Overlay */
+.status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: rgba(15, 17, 26, 0.85);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  z-index: 1000;
+}
+
+.status-left, .status-right {
+  display: flex;
+  align-items: center;
+}
+
+.status-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-cyan);
+}
+
+/* App Container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Header Bar */
+.header-bar {
+  height: 40px;
+  background: rgba(15, 17, 26, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 1000;
+}
+
+.header-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.ready-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #06d6a0;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(6, 214, 160, 0.5);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-cyan);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-pink);
+}
+
+/* Fix overlapping layout */
+.codeatlas-app {
+  flex-direction: row; /* Ensure it stays a row */
+}
+.center-panel {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+/* Fix for main panel row */
+.codeatlas-app {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  height: calc(100vh - 40px - 32px);
 }

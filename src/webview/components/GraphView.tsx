@@ -42,10 +42,14 @@ const GraphView: React.FC<GraphViewProps> = ({ data, onNodeClick }) => {
       ctx.fill();
     }
 
+    ctx.save();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = node.color;
     ctx.beginPath();
     ctx.arc(node.x, node.y, node.val, 0, 2 * Math.PI, false);
     ctx.fillStyle = node.color;
     ctx.fill();
+    ctx.restore();
     
     // Node border
     ctx.strokeStyle = '#222';
@@ -82,9 +86,17 @@ const GraphView: React.FC<GraphViewProps> = ({ data, onNodeClick }) => {
         linkDirectionalArrowLength={3.5}
         linkDirectionalArrowRelPos={1}
         linkDirectionalParticles={(link: any) => link.type === 'call' ? 4 : 0}
-        linkDirectionalParticleSpeed={(d) => 0.01}
+        linkDirectionalParticleSpeed={(link: any) => link.type === 'call' ? 0.02 : 0.01}
+        d3AlphaDecay={0.02}
+        d3VelocityDecay={0.3}
         backgroundColor="transparent"
       />
+      
+      <div className="zoom-controls">
+        <button className="zoom-btn" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.5)}>+</button>
+        <button className="zoom-btn" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() / 1.5)}>-</button>
+        <button className="zoom-btn" onClick={() => fgRef.current?.zoomToFit(400)}>⊞</button>
+      </div>
     </div>
   );
 };
