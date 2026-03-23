@@ -1,14 +1,54 @@
 {
-  "name": "codeatlas-mcp",
+  "name": "@giauphan/codeatlas-mcp",
   "version": "1.0.0",
-  "description": "MCP server for CodeAtlas — exposes code analysis to AI assistants",
+  "description": "MCP server for CodeAtlas — exposes code analysis data to AI assistants via Model Context Protocol",
   "type": "module",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "bin": {
+    "codeatlas-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "start": "npx tsx index.ts"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "npx tsx index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "codeatlas",
+    "code-analysis",
+    "ai",
+    "vscode",
+    "cursor",
+    "codebase",
+    "architecture",
+    "dependencies"
+  ],
+  "author": "GiauPhan <zero99ck9@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giauphan/codeatlas-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/giauphan/codeatlas-mcp/issues"
+  },
+  "homepage": "https://github.com/giauphan/codeatlas-mcp#readme",
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
     "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^5.1.6"
   }
 }
