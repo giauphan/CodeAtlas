@@ -752,3 +752,121 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-pink); }
+
+/* ===== PROGRESSIVE LOADING CONTROLS ===== */
+.load-controls {
+  background: rgba(15, 17, 26, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 999;
+}
+
+.load-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.load-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.load-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-pink));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.load-progress-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.load-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.load-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.load-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.load-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.load-more-btn {
+  border-color: var(--accent-cyan);
+}
+
+.load-all-btn {
+  border-color: var(--accent-pink);
+}
+
+.btn-spinner {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+/* Progressive badge in header */
+.progressive-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(76, 201, 240, 0.15);
+  color: var(--accent-cyan);
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+/* Graph performance indicator */
+.graph-perf-indicator {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  z-index: 50;
+}

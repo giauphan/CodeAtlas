@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
 import { GraphData, GraphNode } from '../../analyzer/types';
 
@@ -24,6 +24,11 @@ const GraphView: React.FC<GraphViewProps> = ({
 }) => {
   const fgRef = useRef<any>();
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
+
+  // Performance thresholds
+  const nodeCount = data.nodes.length;
+  const isLargeGraph = nodeCount > 500;
+  const isVeryLargeGraph = nodeCount > 1000;
 
   // Filter graph data based on active filters
   const [filteredData, setFilteredData] = useState<GraphData>({ nodes: [], links: [] });
@@ -94,17 +99,20 @@ const GraphView: React.FC<GraphViewProps> = ({
     // Set opacity based on search
     ctx.globalAlpha = (isSearchActive && !isMatch) ? 0.2 : 1;
 
-    // Draw glow effect if hovered or matched
-    if (isHovered || isMatch) {
+    // Draw glow effect if hovered or matched (skip for very large graphs unless hovered)
+    if (isHovered || (isMatch && !isVeryLargeGraph)) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, nodeVal + 2, 0, 2 * Math.PI, false);
       ctx.fillStyle = isMatch ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.5)';
       ctx.fill();
     }
 
+    // Reduce shadow complexity for large graphs
     ctx.save();
-    ctx.shadowBlur = isMatch ? 25 : 15;
-    ctx.shadowColor = isMatch ? '#fff' : node.color;
+    if (!isLargeGraph) {
+      ctx.shadowBlur = isMatch ? 25 : 15;
+      ctx.shadowColor = isMatch ? '#fff' : node.color;
+    }
     ctx.beginPath();
     ctx.arc(node.x, node.y, nodeVal, 0, 2 * Math.PI, false);
     ctx.fillStyle = node.color;
@@ -116,7 +124,10 @@ const GraphView: React.FC<GraphViewProps> = ({
     ctx.lineWidth = 1 / globalScale;
     ctx.stroke();
 
-    if (isHovered || isMatch || globalScale > 1.5) {
+    // Show labels: always for hovered/matched, conditionally for zoom level
+    // For large graphs, only show labels when zoomed in more
+    const labelZoomThreshold = isLargeGraph ? 2.5 : 1.5;
+    if (isHovered || isMatch || globalScale > labelZoomThreshold) {
       const textWidth = ctx.measureText(label).width;
       const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
       
@@ -142,6 +153,11 @@ const GraphView: React.FC<GraphViewProps> = ({
     onNodeClick(node);
   };
 
+  // Dynamic physics based on graph size
+  const d3AlphaDecay = isVeryLargeGraph ? 0.05 : isLargeGraph ? 0.03 : 0.02;
+  const d3VelocityDecay = isVeryLargeGraph ? 0.5 : isLargeGraph ? 0.4 : 0.3;
+  const warmupTicks = isVeryLargeGraph ? 100 : isLargeGraph ? 50 : 0;
+
   return (
     <div className="graph-container">
       <ForceGraph2D
@@ -157,10 +173,11 @@ const GraphView: React.FC<GraphViewProps> = ({
         onNodeClick={(node) => handleNodeClick(node as GraphNode)}
         linkDirectionalArrowLength={3.5}
         linkDirectionalArrowRelPos={1}
-        linkDirectionalParticles={(link: any) => link.type === 'call' ? 4 : 0}
-        linkDirectionalParticleSpeed={(link: any) => link.type === 'call' ? 0.02 : 0.01}
-        d3AlphaDecay={0.02}
-        d3VelocityDecay={0.3}
+        linkDirectionalParticles={isLargeGraph ? 0 : (link: any) => link.type === 'call' ? 4 : 0}
+        linkDirectionalParticleSpeed={isLargeGraph ? 0 : (link: any) => link.type === 'call' ? 0.02 : 0.01}
+        d3AlphaDecay={d3AlphaDecay}
+        d3VelocityDecay={d3VelocityDecay}
+        warmupTicks={warmupTicks}
         backgroundColor="transparent"
       />
       
@@ -169,6 +186,13 @@ const GraphView: React.FC<GraphViewProps> = ({
         <button className="zoom-btn" onClick={() => fgRef.current?.zoom(fgRef.current.zoom() / 1.5)}>-</button>
         <button className="zoom-btn" onClick={() => fgRef.current?.zoomToFit(400)}>⊞</button>
       </div>
+
+      {/* Node count indicator */}
+      {isLargeGraph && (
+        <div className="graph-perf-indicator">
+          ⚡ {filteredData.nodes.length} nodes
+        </div>
+      )}
     </div>
   );
 };

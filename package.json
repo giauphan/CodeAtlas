@@ -2,7 +2,7 @@
   "name": "codeatlas",
   "displayName": "CodeAtlas",
   "description": "Lightweight AI-powered source code analysis extension for VS Code / Cursor",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "publisher": "giauphan",
   "icon": "resources/icon.png",
   "repository": {
@@ -46,8 +46,8 @@
       "properties": {
         "codeatlas.maxFiles": {
           "type": "number",
-          "default": 500,
-          "description": "Maximum number of files to analyze"
+          "default": 5000,
+          "description": "Maximum number of files to analyze (set to 0 for unlimited). All data is saved; UI display is controlled by initialNodeLimit."
         },
         "codeatlas.excludedDirectories": {
           "type": "array",
@@ -98,6 +98,11 @@
           ],
           "default": "default",
           "description": "Graph force simulation intensity"
+        },
+        "codeatlas.initialNodeLimit": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of nodes to load initially in the graph view. Set to 0 to load all nodes at once."
         }
       }
     }

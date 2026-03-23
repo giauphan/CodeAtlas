@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { parse } from '@typescript-eslint/typescript-estree';
-import { GraphData, GraphNode, GraphLink, AnalysisResult, AIInsight } from './types';
+import { GraphData, GraphNode, GraphLink, AnalysisResult, AIInsight, AnalysisManifest, FolderInfo, ChunkData, CrossChunkLinks } from './types';
 import { PythonParser } from './pythonParser';
 import { PhpParser } from './phpParser';
 
@@ -16,7 +16,7 @@ export class CodeAnalyzer {
 
   constructor(
     workspaceRoot: string,
-    maxFiles: number = 500,
+    maxFiles: number = 5000,
     excludedDirectories: string[] = ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv'],
     fileExtensions: string[] = ['.ts', '.tsx', '.js', '.jsx', '.py', '.php'],
     excludedFiles: string[] = ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']
@@ -80,6 +80,184 @@ export class CodeAnalyzer {
       entityCounts: counts,
       totalFilesAnalyzed: files.length - totalSkipped,
       totalFilesSkipped: totalSkipped
+    };
+  }
+
+  /**
+   * Builds chunked analysis data grouped by folder.
+   * Call this after analyzeProject() to get folder-based chunks.
+   */
+  public buildChunkedResult(result: AnalysisResult): {
+    manifest: AnalysisManifest;
+    chunks: Map<string, ChunkData>;
+    crossChunkLinks: CrossChunkLinks;
+  } {
+    // Group nodes by their parent folder
+    const folderNodeMap = new Map<string, GraphNode[]>();
+
+    for (const node of result.graph.nodes) {
+      let folder = '.'; // root
+      if (node.filePath) {
+        const rel = path.relative(this.workspaceRoot, node.filePath);
+        folder = path.dirname(rel).replace(/\\/g, '/');
+      } else if (node.id.startsWith('module:')) {
+        const rel = node.id.replace('module:', '');
+        folder = path.dirname(rel).replace(/\\/g, '/');
+      } else if (node.id.startsWith('external:')) {
+        folder = '__external__';
+      } else {
+        // Extract folder from node id (e.g. "class:module:src/foo.ts:MyClass")
+        const parts = node.id.split(':');
+        if (parts.length >= 3 && parts[1] === 'module') {
+          // Reconstruct the path from parts[2] (e.g. "src/foo.ts")
+          folder = path.dirname(parts[2]).replace(/\\/g, '/');
+        } else if (parts.length >= 2) {
+          const moduleRef = parts.slice(1, -1).join(':').replace(/^module:/, '');
+          if (moduleRef) {
+            folder = path.dirname(moduleRef).replace(/\\/g, '/');
+          }
+        }
+      }
+
+      if (!folderNodeMap.has(folder)) {
+        folderNodeMap.set(folder, []);
+      }
+      folderNodeMap.get(folder)!.push(node);
+    }
+
+    // Build chunks and separate cross-chunk links
+    const chunks = new Map<string, ChunkData>();
+    const nodeToFolder = new Map<string, string>();
+    const crossLinks: GraphLink[] = [];
+
+    // Map each node to its folder
+    for (const [folder, nodes] of folderNodeMap) {
+      for (const node of nodes) {
+        nodeToFolder.set(node.id, folder);
+      }
+    }
+
+    // Create chunks with internal links
+    for (const [folder, nodes] of folderNodeMap) {
+      const nodeIds = new Set(nodes.map(n => n.id));
+      const internalLinks = result.graph.links.filter(
+        link => nodeIds.has(link.source) && nodeIds.has(link.target)
+      );
+      chunks.set(folder, {
+        folderPath: folder,
+        nodes,
+        links: internalLinks
+      });
+    }
+
+    // Collect cross-chunk links
+    for (const link of result.graph.links) {
+      const srcFolder = nodeToFolder.get(link.source);
+      const tgtFolder = nodeToFolder.get(link.target);
+      if (srcFolder && tgtFolder && srcFolder !== tgtFolder) {
+        crossLinks.push(link);
+      }
+    }
+
+    // Build folder info for manifest
+    const folders: FolderInfo[] = [];
+    for (const [folder, chunk] of chunks) {
+      const types: Record<string, number> = {};
+      for (const node of chunk.nodes) {
+        types[node.type] = (types[node.type] || 0) + 1;
+      }
+      folders.push({
+        path: folder,
+        nodeCount: chunk.nodes.length,
+        linkCount: chunk.links.length,
+        types
+      });
+    }
+    // Sort folders by node count descending for prioritized loading
+    folders.sort((a, b) => b.nodeCount - a.nodeCount);
+
+    const manifest: AnalysisManifest = {
+      totalNodes: result.graph.nodes.length,
+      totalLinks: result.graph.links.length,
+      totalFiles: result.totalFilesAnalyzed + result.totalFilesSkipped,
+      totalFilesSkipped: result.totalFilesSkipped,
+      folders,
+      insights: result.insights,
+      entityCounts: result.entityCounts
+    };
+
+    return { manifest, chunks, crossChunkLinks: { links: crossLinks } };
+  }
+
+  /**
+   * Returns the first N nodes for initial loading, picking from folders in order.
+   */
+  public getInitialLoadData(
+    result: AnalysisResult,
+    manifest: AnalysisManifest,
+    chunks: Map<string, ChunkData>,
+    crossChunkLinks: CrossChunkLinks,
+    nodeLimit: number
+  ): { graph: GraphData; loadedFolders: string[] } {
+    if (nodeLimit <= 0 || nodeLimit >= result.graph.nodes.length) {
+      // Load everything
+      return {
+        graph: result.graph,
+        loadedFolders: manifest.folders.map(f => f.path)
+      };
+    }
+
+    const loadedNodes: GraphNode[] = [];
+    const loadedFolders: string[] = [];
+    let remaining = nodeLimit;
+
+    // Load folders by priority (sorted by nodeCount descending — most important first)
+    // Actually, for better UX, sort by path alphabetically so root folders load first
+    const sortedFolders = [...manifest.folders].sort((a, b) => {
+      // Root folder first, then by depth, then alphabetically
+      if (a.path === '.') return -1;
+      if (b.path === '.') return 1;
+      const depthA = a.path.split('/').length;
+      const depthB = b.path.split('/').length;
+      if (depthA !== depthB) return depthA - depthB;
+      return a.path.localeCompare(b.path);
+    });
+
+    for (const folderInfo of sortedFolders) {
+      if (remaining <= 0) break;
+      const chunk = chunks.get(folderInfo.path);
+      if (!chunk) continue;
+
+      if (chunk.nodes.length <= remaining) {
+        loadedNodes.push(...chunk.nodes);
+        loadedFolders.push(folderInfo.path);
+        remaining -= chunk.nodes.length;
+      } else {
+        // Partial load: take module nodes first, then classes, then functions, then variables
+        const priorityOrder = ['module', 'class', 'function', 'variable'];
+        const sorted = [...chunk.nodes].sort((a, b) => {
+          const indexA = priorityOrder.indexOf(a.type);
+          const indexB = priorityOrder.indexOf(b.type);
+          // Unknown types go to the end
+          const priorityA = indexA === -1 ? priorityOrder.length : indexA;
+          const priorityB = indexB === -1 ? priorityOrder.length : indexB;
+          return priorityA - priorityB;
+        });
+        loadedNodes.push(...sorted.slice(0, remaining));
+        loadedFolders.push(folderInfo.path);
+        remaining = 0;
+      }
+    }
+
+    // Filter links to only include those where both endpoints are loaded
+    const loadedNodeIds = new Set(loadedNodes.map(n => n.id));
+    const loadedLinks = result.graph.links.filter(
+      link => loadedNodeIds.has(link.source) && loadedNodeIds.has(link.target)
+    );
+
+    return {
+      graph: { nodes: loadedNodes, links: loadedLinks },
+      loadedFolders
     };
   }
 

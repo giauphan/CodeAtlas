@@ -1,11 +1,21 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { WebviewProvider } from './WebviewProvider';
 import { CodeAnalyzer } from './analyzer/parser';
+import { AnalysisResult, AnalysisManifest, ChunkData, CrossChunkLinks } from './analyzer/types';
 
 /**
  * Global status bar item for CodeAtlas analysis state.
  */
 let statusBarItem: vscode.StatusBarItem;
+
+/** Cached analysis data for progressive loading requests from webview */
+let cachedResult: AnalysisResult | null = null;
+let cachedManifest: AnalysisManifest | null = null;
+let cachedChunks: Map<string, ChunkData> | null = null;
+let cachedCrossChunkLinks: CrossChunkLinks | null = null;
+let cachedAnalyzer: CodeAnalyzer | null = null;
 
 /**
  * Activates the CodeAtlas extension.
@@ -52,6 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
       const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
       const excludedFiles = config.get<string[]>('excludedFiles', ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']);
       const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
+      const initialNodeLimit = config.get<number>('initialNodeLimit', 100);
 
       // Initialize analyzer
       const analyzer = new CodeAnalyzer(workspaceRoot, maxFiles, excludedDirectories, fileExtensions, excludedFiles);
@@ -61,13 +72,38 @@ export function activate(context: vscode.ExtensionContext) {
       try {
         const result = await analyzer.analyzeProject();
         
+        progress.report({ increment: 50, message: "Building chunks..." });
+
+        // Build chunked data
+        const { manifest, chunks, crossChunkLinks } = analyzer.buildChunkedResult(result);
+
+        // Cache for webview requests
+        cachedResult = result;
+        cachedManifest = manifest;
+        cachedChunks = chunks;
+        cachedCrossChunkLinks = crossChunkLinks;
+        cachedAnalyzer = analyzer;
+
         progress.report({ increment: 70, message: "Generating Webview..." });
         
         // Show webview
         WebviewProvider.createOrShow(context.extensionUri, workspaceRoot);
         
-        // Send data to webview
-        WebviewProvider.currentPanel?.sendAnalysisData(result);
+        // Determine if progressive loading is needed
+        const totalNodes = result.graph.nodes.length;
+        if (initialNodeLimit > 0 && totalNodes > initialNodeLimit) {
+          // Progressive loading: send initial subset
+          const initialData = analyzer.getInitialLoadData(result, manifest, chunks, crossChunkLinks, initialNodeLimit);
+          WebviewProvider.currentPanel?.sendInitialLoadData({
+            manifest,
+            initialGraph: initialData.graph,
+            loadedFolders: initialData.loadedFolders,
+            initialNodeLimit
+          });
+        } else {
+          // Small project: send everything at once (backward compatible)
+          WebviewProvider.currentPanel?.sendAnalysisData(result);
+        }
         
         // Pass graph physics configuration
         const graphPhysics = config.get<string>('graphPhysics', 'default');
@@ -79,9 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
           statusBarItem.text = `$(project) CodeAtlas: ${numNodes} nodes | ${numLinks} rels`;
         }
 
-        // Save analysis data for MCP server
-        const fs = require('fs');
-        const path = require('path');
+        // Save analysis data for MCP server (full data, backward compatible)
         const codeatlasDir = path.join(workspaceRoot, '.codeatlas');
         if (!fs.existsSync(codeatlasDir)) {
           fs.mkdirSync(codeatlasDir, { recursive: true });
@@ -89,6 +123,33 @@ export function activate(context: vscode.ExtensionContext) {
         fs.writeFileSync(
           path.join(codeatlasDir, 'analysis.json'),
           JSON.stringify(result, null, 2),
+          'utf-8'
+        );
+
+        // Save chunked data
+        const chunksDir = path.join(codeatlasDir, 'chunks');
+        if (!fs.existsSync(chunksDir)) {
+          fs.mkdirSync(chunksDir, { recursive: true });
+        }
+        // Save manifest
+        fs.writeFileSync(
+          path.join(codeatlasDir, 'manifest.json'),
+          JSON.stringify(manifest, null, 2),
+          'utf-8'
+        );
+        // Save each chunk
+        for (const [folder, chunk] of chunks) {
+          const safeFolder = encodeURIComponent(folder);
+          fs.writeFileSync(
+            path.join(chunksDir, `${safeFolder}.json`),
+            JSON.stringify(chunk, null, 2),
+            'utf-8'
+          );
+        }
+        // Save cross-chunk links
+        fs.writeFileSync(
+          path.join(chunksDir, '__cross_links__.json'),
+          JSON.stringify(crossChunkLinks, null, 2),
           'utf-8'
         );
 
@@ -135,9 +196,37 @@ export function activate(context: vscode.ExtensionContext) {
         try {
           const workspaceFolders = vscode.workspace.workspaceFolders;
           if (workspaceFolders && workspaceFolders.length > 0) {
-            const analyzer = new CodeAnalyzer(workspaceFolders[0].uri.fsPath);
+            const config = vscode.workspace.getConfiguration('codeatlas');
+            const initialNodeLimit = config.get<number>('initialNodeLimit', 100);
+            const maxFiles = config.get<number>('maxFiles', 500);
+            const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
+            const excludedFiles = config.get<string[]>('excludedFiles', ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']);
+            const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
+
+            const analyzer = new CodeAnalyzer(workspaceFolders[0].uri.fsPath, maxFiles, excludedDirectories, fileExtensions, excludedFiles);
             const result = await analyzer.analyzeProject();
-            WebviewProvider.currentPanel.sendAnalysisData(result);
+            const { manifest, chunks, crossChunkLinks } = analyzer.buildChunkedResult(result);
+
+            // Update cache
+            cachedResult = result;
+            cachedManifest = manifest;
+            cachedChunks = chunks;
+            cachedCrossChunkLinks = crossChunkLinks;
+            cachedAnalyzer = analyzer;
+
+            const totalNodes = result.graph.nodes.length;
+            if (initialNodeLimit > 0 && totalNodes > initialNodeLimit) {
+              const initialData = analyzer.getInitialLoadData(result, manifest, chunks, crossChunkLinks, initialNodeLimit);
+              WebviewProvider.currentPanel.sendInitialLoadData({
+                manifest,
+                initialGraph: initialData.graph,
+                loadedFolders: initialData.loadedFolders,
+                initialNodeLimit
+              });
+            } else {
+              WebviewProvider.currentPanel.sendAnalysisData(result);
+            }
+
             if (statusBarItem) {
               statusBarItem.text = `$(project) CodeAtlas: ${result.graph.nodes.length} nodes | ${result.graph.links.length} rels`;
             }
@@ -165,7 +254,8 @@ export function activate(context: vscode.ExtensionContext) {
         if (
           e.affectsConfiguration('codeatlas.maxFiles') ||
           e.affectsConfiguration('codeatlas.excludedDirectories') ||
-          e.affectsConfiguration('codeatlas.fileExtensions')
+          e.affectsConfiguration('codeatlas.fileExtensions') ||
+          e.affectsConfiguration('codeatlas.initialNodeLimit')
         ) {
           vscode.commands.executeCommand('codeatlas.analyzeProject');
         }
@@ -175,10 +265,28 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
+ * Returns cached analysis data for webview requests.
+ */
+export function getCachedData() {
+  return {
+    result: cachedResult,
+    manifest: cachedManifest,
+    chunks: cachedChunks,
+    crossChunkLinks: cachedCrossChunkLinks,
+    analyzer: cachedAnalyzer
+  };
+}
+
+/**
  * Deactivates the CodeAtlas extension and cleans up resources.
  */
 export function deactivate() {
   if (statusBarItem) {
     statusBarItem.dispose();
   }
+  cachedResult = null;
+  cachedManifest = null;
+  cachedChunks = null;
+  cachedCrossChunkLinks = null;
+  cachedAnalyzer = null;
 }
