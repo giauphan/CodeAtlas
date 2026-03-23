@@ -58,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
       
       // Read settings
       const config = vscode.workspace.getConfiguration('codeatlas');
-      const maxFiles = config.get<number>('maxFiles', 500);
+      const maxFiles = config.get<number>('maxFiles', 5000);
       const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
       const excludedFiles = config.get<string[]>('excludedFiles', ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']);
       const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
@@ -198,7 +198,7 @@ export function activate(context: vscode.ExtensionContext) {
           if (workspaceFolders && workspaceFolders.length > 0) {
             const config = vscode.workspace.getConfiguration('codeatlas');
             const initialNodeLimit = config.get<number>('initialNodeLimit', 100);
-            const maxFiles = config.get<number>('maxFiles', 500);
+            const maxFiles = config.get<number>('maxFiles', 5000);
             const excludedDirectories = config.get<string[]>('excludedDirectories', ['node_modules', 'dist', 'out', '.git', '__pycache__', '.venv', 'vendor', 'storage']);
             const excludedFiles = config.get<string[]>('excludedFiles', ['_ide_helper.php', '_ide_helper_models.php', '.phpstorm.meta.php']);
             const fileExtensions = config.get<string[]>('fileExtensions', ['.ts', '.tsx', '.js', '.jsx', '.py', '.php']);
