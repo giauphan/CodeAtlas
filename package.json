@@ -1,5 +1,5 @@
 {
-  "name": "codeatlas-mcp",
+  "name": "@giauphan/codeatlas-mcp",
   "version": "1.0.0",
   "description": "MCP server for CodeAtlas — exposes code analysis data to AI assistants via Model Context Protocol",
   "type": "module",
