@@ -4,7 +4,7 @@
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "out",
     "strict": true,
     "moduleResolution": "NodeNext",
@@ -14,7 +14,8 @@
     "jsx": "react-jsx"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "index.ts"
   ],
   "exclude": [
     "node_modules",
