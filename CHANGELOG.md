@@ -2,6 +2,24 @@
 
 All notable changes to CodeAtlas are documented here.
 
+## [1.4.0] - 2026-04-03
+
+### Added
+- **`generate_system_flow` MCP tool** — Auto-generates Mermaid flowchart diagrams from code analysis. Supports 3 scopes: `modules-only`, `full`, `feature`
+- **`sync_system_memory` MCP tool** — Creates/updates `.agents/memory/` folder with 6 auto-generated files (system-map.md, modules.json, feature-flows.json, business-rules.json, change-log.json, conventions.md). Serves as AI's persistent long-term memory between conversations
+- **`trace_feature_flow` MCP tool** — BFS-based feature tracing: give a keyword, get all related files sorted by dependency order with `readingOrder` for AI to follow
+- **Auto-memory rule template** — `.agents/rules/auto-memory.md` forces AI to read memory at conversation start and sync after code changes
+- **CodeAtlas MCP rule template** — `.agents/rules/codeatlas-mcp.md` forces AI to use MCP tools before manual grep
+- **Setup guide** — `docs/AI-MEMORY-SETUP.md` with step-by-step instructions for any project
+- **Rule templates** — `docs/rules-template/` folder with ready-to-copy rule files
+
+### Changed
+- MCP server version bumped to 1.4.0 (9 tools total: 6 existing + 3 new)
+- `tsconfig.json` — `rootDir` changed to `.` and `index.ts` added to `include` for proper IDE type checking
+- Added `@modelcontextprotocol/sdk` and `zod` to `package.json` dependencies (were previously only available via npx)
+
+---
+
 ## [1.2.2] - 2026-03-21
 
 ### Added
