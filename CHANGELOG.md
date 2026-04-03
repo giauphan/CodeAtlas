@@ -2,6 +2,17 @@
 
 All notable changes to CodeAtlas are documented here.
 
+## [1.4.1] - 2026-04-03
+
+### Fixed
+- Fixed `.agent/memory/` → `.agents/memory/` path in `index.ts` and `auto-memory.md` to match project convention
+
+### Added
+- `scripts/sync-all-memory.cjs` — Utility script to generate `.agents/memory/` for all projects at once
+- Version & changelog rule in `.agents/rules/rule.md` — AI must bump version + update changelog on every change
+
+---
+
 ## [1.4.0] - 2026-04-03
 
 ### Added
