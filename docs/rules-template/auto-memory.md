@@ -46,12 +46,35 @@ trigger: always_on
 
 ### 🔄 MANDATORY: Sync Memory After Changes
 
-After completing ANY code changes:
+**After completing ANY code changes, you MUST call `sync_system_memory` with BOTH params:**
 
-1. Call `sync_system_memory` MCP tool with:
-   - `changeDescription`: Brief description of what was changed
-   - `businessRule`: If user mentioned any new business rule, save it
-2. This automatically updates all memory files so next conversation remembers
+1. **`changeDescription`** (ALWAYS required): What you just changed
+   - Example: `"Fixed crawl timeout by adding retry logic in crawler.py"`
+
+2. **`businessRule`** (extract from conversation if applicable): 
+   - Listen for ANY domain logic the user mentions during the conversation
+   - Business rules are statements like:
+     - "Video dưới 10 giây thì bỏ qua"
+     - "VIP user skip email verify"  
+     - "Chỉ crawl video có trên 1000 likes"
+     - "Upload lên Drive folder theo topic"
+   - Even if user says it casually, SAVE IT as a business rule
+   - If no business rule was mentioned, omit this param
+
+**Example:**
+```
+User: "fix crawl lỗi, nhớ là chỉ lấy video trên 500 likes thôi"
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                    → This is a business rule!
+
+AI after fixing:
+sync_system_memory(
+  changeDescription: "Fixed crawl error in browser_search.py",
+  businessRule: "Only crawl videos with 500+ likes"
+)
+```
+
+**DO NOT SKIP THIS STEP.** If you forget to sync, the next conversation loses all context.
 
 ### 📊 When User Asks About System Flow
 
