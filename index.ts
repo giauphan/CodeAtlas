@@ -673,7 +673,10 @@ server.tool(
     let businessRules: Array<{ rule: string; addedAt: string }> = [];
     if (fs.existsSync(businessRulesPath)) {
       try {
-        businessRules = JSON.parse(fs.readFileSync(businessRulesPath, "utf-8"));
+        const parsed = JSON.parse(fs.readFileSync(businessRulesPath, "utf-8"));
+        if (Array.isArray(parsed)) {
+          businessRules = parsed;
+        }
       } catch { /* start fresh */ }
     }
     if (businessRule) {
@@ -686,7 +689,10 @@ server.tool(
     let changeLog: Array<{ description: string; timestamp: string }> = [];
     if (fs.existsSync(changeLogPath)) {
       try {
-        changeLog = JSON.parse(fs.readFileSync(changeLogPath, "utf-8"));
+        const parsed = JSON.parse(fs.readFileSync(changeLogPath, "utf-8"));
+        if (Array.isArray(parsed)) {
+          changeLog = parsed;
+        }
       } catch { /* start fresh */ }
     }
     if (changeDescription) {
